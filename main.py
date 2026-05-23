@@ -18,13 +18,13 @@ def main():
         description="Local AI Coding Agent",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  python main.py                          # interactive CLI
-  python main.py "read main.py"           # one-shot
-  python main.py --default-task           # run idle engineering learning task
-  python main.py --web                    # Web UI at http://localhost:8000
-  python main.py --model qwen3:8b        # use another model
-  python main.py --yes "clean cache"     # dangerous auto-confirm mode
+            Examples:
+            python main.py                          # interactive CLI
+            python main.py "read main.py"           # one-shot
+            python main.py --default-task           # run idle engineering learning task
+            python main.py --web                    # Web UI at http://localhost:8000
+            python main.py --model qwen3:8b        # use another model
+            python main.py --yes "clean cache"     # dangerous auto-confirm mode
         """
     )
     parser.add_argument("task", nargs="?", help="Task (one-shot mode)")
