@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,15 +222,15 @@
 
     <div class="chat" id="chat">
       <div class="welcome" id="welcome">
-        <h2>👋 Chào mừng đến với Local AI Coding Agent</h2>
-        <p>AI agent chạy hoàn toàn local, không gửi data ra ngoài. Powered by Ollama.</p>
+        <h2>Welcome to Local AI Coding Agent</h2>
+        <p>A fully local AI agent powered by Ollama.</p>
         <div class="suggestions">
-          <div class="suggestion" onclick="setTask(this.textContent)">Đọc và giải thích file main.py</div>
-          <div class="suggestion" onclick="setTask(this.textContent)">Tìm tất cả bug trong thư mục src/</div>
-          <div class="suggestion" onclick="setTask(this.textContent)">Viết unit test cho hàm calculate()</div>
-          <div class="suggestion" onclick="setTask(this.textContent)">Refactor code theo PEP 8</div>
-          <div class="suggestion" onclick="setTask(this.textContent)">Giải thích git diff hiện tại</div>
-          <div class="suggestion" onclick="setTask(this.textContent)">Tạo README.md cho project này</div>
+          <div class="suggestion" onclick="setTask(this.textContent)">Read and explain main.py</div>
+          <div class="suggestion" onclick="setTask(this.textContent)">Find bugs in the src/ directory</div>
+          <div class="suggestion" onclick="setTask(this.textContent)">Write unit tests for calculate()</div>
+          <div class="suggestion" onclick="setTask(this.textContent)">Refactor code according to PEP 8</div>
+          <div class="suggestion" onclick="setTask(this.textContent)">Explain the current git diff</div>
+          <div class="suggestion" onclick="setTask(this.textContent)">Create a README.md for this project</div>
         </div>
       </div>
     </div>
@@ -238,12 +238,12 @@
     <div class="input-area">
       <div class="input-row">
         <div class="input-wrap">
-          <textarea id="task-input" placeholder="Mô tả task, hoặc để trống để chạy default task..." rows="1"
+          <textarea id="task-input" placeholder="Describe a task, or leave empty to run the default task..." rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
           <button class="send-btn" id="send-btn" onclick="sendTask()">↑</button>
         </div>
       </div>
-      <div class="input-hints">Enter để gửi · Shift+Enter để xuống dòng</div>
+      <div class="input-hints">Enter to send · Shift+Enter for a new line</div>
     </div>
   </div>
 </div>
@@ -423,7 +423,7 @@ function showThinking() {
   div.innerHTML = `
     <div class="thinking">
       <div class="dot-anim"><span></span><span></span><span></span></div>
-      Agent đang xử lý...
+      Agent is working...
     </div>`;
   chat.appendChild(div);
   scrollBottom();
@@ -501,11 +501,11 @@ function showConfirm(data) {
   div.id = id;
   div.innerHTML = `
     <div class="confirm-card">
-      <div class="confirm-title">⚠️ Xác nhận hành động</div>
+      <div class="confirm-title">⚠️ Confirm action</div>
       <div class="confirm-code">${escHtml(data.prompt)}</div>
       <div class="confirm-btns">
-        <button class="btn primary" onclick="respondConfirm('${id}', true)">✓ Cho phép</button>
-        <button class="btn danger" onclick="respondConfirm('${id}', false)">✗ Từ chối</button>
+        <button class="btn primary" onclick="respondConfirm('${id}', true)">✓ Allow</button>
+        <button class="btn danger" onclick="respondConfirm('${id}', false)">✗ Decline</button>
       </div>
     </div>`;
   chat.appendChild(div);

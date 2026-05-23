@@ -1,6 +1,6 @@
 """
-Code runner — chạy Python và Node.js code snippets an toàn.
-Dùng subprocess với timeout, không phải exec() trực tiếp.
+Code runner: execute Python and Node.js snippets safely.
+Uses subprocesses with timeouts instead of direct exec().
 """
 from __future__ import annotations
 

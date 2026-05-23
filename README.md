@@ -1,103 +1,104 @@
-# ⚡ Local AI Coding Agent
+# Local AI Coding Agent
 
-AI Agent chạy hoàn toàn **local**, không gửi data ra ngoài. Dùng Ollama + Open Source LLM để điều khiển máy tính và hỗ trợ lập trình.
+A fully local AI agent powered by Ollama and open-source LLMs. It can reason, call tools, edit code, run checks, use the desktop, and expose a Web UI for interactive work.
 
-## Tính năng
+## Features
 
-- 🤖 **ReAct Loop** — suy luận + hành động lặp lại cho đến khi hoàn thành task
-- 🖥️ **CLI đẹp** — terminal UI với Rich, streaming real-time
-- 🌐 **Web UI** — giao diện chat với WebSocket, dark theme
-- 🛠️ **18 Tools sẵn có** — shell, file ops, code runner, computer use, web search, git
-- 🧠 **Memory** — short-term (context) + long-term (SQLite)
-- 🔒 **Safety Gate** — xác nhận trước khi chạy lệnh nguy hiểm
-- 🛡️ **Privacy Boundary** — chặn/confirm khi đụng secret, private key, `.env`, hoặc gửi query ra ngoài
-- 🪟 **Cross-platform** — Windows (PowerShell) + Linux/Mac (bash)
+- ReAct loop for iterative reasoning and tool use
+- Rich CLI with real-time streaming
+- Web UI with WebSocket streaming and a dark interface
+- 18 built-in tools: shell, file operations, code runner, computer use, web search, and git
+- Memory: short-term context plus long-term SQLite history
+- Safety gate for dangerous or sensitive actions
+- Privacy boundary for secrets, private keys, `.env` files, and outbound requests
+- Cross-platform shell support: PowerShell on Windows, bash on Linux/macOS
 
-## Cài đặt nhanh
+## Quick Start
 
-### 1. Cài Ollama
+### 1. Install Ollama
 
-**Linux/Mac:**
+Linux/macOS:
+
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-**Windows:** Tải từ https://ollama.com → cài đặt như ứng dụng thông thường
+Windows: download and install Ollama from https://ollama.com.
 
-### 2. Pull model
+### 2. Pull a Model
 
 ```bash
-# Orchestrator mặc định cho research/planning/điều phối
+# Default orchestrator for research, planning, and coordination
 ollama pull qwen3:8b
 
-# Tuỳ chọn cho coding nặng
+# Optional coding model
 ollama pull qwen2.5-coder:7b
 
-# Model coding mạnh hơn
+# Stronger coding model
 ollama pull qwen2.5-coder:14b
 ```
 
-### 3. Clone & cài dependencies
+### 3. Install Dependencies
 
 ```bash
 git clone <repo-url>
 cd local-agent
-python setup.py          # kiểm tra môi trường + cài deps
+python setup.py
 
-# Hoặc thủ công:
+# Or install manually:
 pip install -r requirements.txt
 ```
 
-### 4. Chạy
+### 4. Run
 
 ```bash
-# Start Ollama (nếu chưa chạy)
+# Start Ollama if it is not already running
 ollama serve
 
-# CLI interactive
+# Interactive CLI
 python main.py
 
 # One-shot task
-python main.py "đọc file main.py và giải thích"
+python main.py "read main.py and explain it"
 
-# Chạy default idle task: học system design, conventions, DevOps để áp dụng vào dự án
+# Default idle task: learn system design, conventions, and DevOps practices for future projects
 python main.py --default-task
 
 # Web UI
 python main.py --web
-# → mở http://localhost:8000
+# Open http://localhost:8000
 ```
 
-## Sử dụng CLI
+## CLI Usage
 
 ```bash
 # Interactive mode
 python main.py
 
-# One-shot với model cụ thể
-python main.py "nghiên cứu idea và lập plan MVP" --model qwen3:8b
+# One-shot with a specific model
+python main.py "research this product idea and draft an MVP plan" --model qwen3:8b
 
-# Bỏ qua xác nhận (dùng cẩn thận)
-python main.py --yes "clean cache và build lại"
+# Auto-confirm actions, use carefully
+python main.py --yes "clean cache and rebuild"
 
-# Xem lịch sử chat
+# Show chat history
 python main.py history
 
-# Liệt kê models đã cài
+# List installed Ollama models
 python main.py models
 ```
 
-### Lệnh trong interactive mode
+### Interactive Commands
 
-| Lệnh | Mô tả |
-|------|-------|
-| `/exit` | Thoát |
-| `/history` | Xem lịch sử gần đây |
-| `/clear` | Xóa memory context |
-| `/models` | Danh sách models |
-| `/default` | Chạy default idle task |
+| Command | Description |
+|---|---|
+| `/exit` | Exit |
+| `/history` | Show recent history |
+| `/clear` | Clear memory context |
+| `/models` | List models |
+| `/default` | Run the default idle task |
 
-Nhấn Enter ở prompt trống cũng sẽ chạy default idle task.
+Press Enter on an empty prompt to run the default idle task.
 
 ## Web UI
 
@@ -105,35 +106,36 @@ Nhấn Enter ở prompt trống cũng sẽ chạy default idle task.
 python main.py --web --port 8000
 ```
 
-Mở http://localhost:8000
+Open http://localhost:8000.
 
-**Tính năng Web UI:**
-- Chat interface với WebSocket streaming
-- Xem từng step của agent (click để expand)
-- Toggle auto-confirm cho actions
-- Đổi model realtime
-- Xóa memory
-- Nút **Run Default** để agent tự nghiên cứu system design, web/app design, coding conventions, DevOps khi chưa có task cụ thể
+Web UI features:
 
-## Cổng nhận task và confirm
+- Chat interface with WebSocket streaming
+- Step-by-step agent traces, expandable in the UI
+- Auto-confirm toggle
+- Runtime model selection
+- Memory clearing
+- Run Default button for system design, web/app design, coding conventions, and DevOps learning
 
-Ngoài CLI/WebSocket, backend có REST API để app khác gửi task và phản hồi confirm.
+## Task and Confirmation API
 
-### 1. Gửi yêu cầu/idea
+The backend also exposes REST endpoints so other apps can submit tasks and respond to confirmation prompts.
+
+### 1. Create a Task
 
 ```bash
 curl -X POST http://localhost:8000/api/tasks \
   -H "Content-Type: application/json" \
   -d '{
-    "task": "Nghiên cứu idea X, lên đường đến market, lập plan và triển khai MVP",
+    "task": "Research product idea X, evaluate the path to market, plan the MVP, and implement it",
     "auto_confirm": false,
     "max_steps": 25
   }'
 ```
 
-Nếu gửi `"task": ""`, backend sẽ chạy default idle task.
+If `"task": ""`, the backend runs the default idle task.
 
-Response có `task_id`:
+Example response:
 
 ```json
 {
@@ -144,13 +146,13 @@ Response có `task_id`:
 }
 ```
 
-### 2. Xem trạng thái task
+### 2. Check Task Status
 
 ```bash
 curl http://localhost:8000/api/tasks/<task_id>
 ```
 
-Khi agent cần bạn xác nhận, response sẽ có:
+When the agent needs confirmation, the response includes:
 
 ```json
 {
@@ -163,7 +165,7 @@ Khi agent cần bạn xác nhận, response sẽ có:
 }
 ```
 
-### 3. Gửi confirm
+### 3. Confirm or Decline
 
 ```bash
 curl -X POST http://localhost:8000/api/tasks/<task_id>/confirm \
@@ -174,116 +176,117 @@ curl -X POST http://localhost:8000/api/tasks/<task_id>/confirm \
   }'
 ```
 
-Để từ chối, gửi `"confirmed": false`.
+To decline, send `"confirmed": false`.
 
 ## Operating Workflow
 
-Mục tiêu agent:
+The agent is designed to:
 
-- Nhận idea/yêu cầu từ bạn qua CLI, WebSocket, hoặc `POST /api/tasks`.
-- Nghiên cứu đường đến market trước khi triển khai: target user, pain point, kênh phân phối, rủi ro, MVP scope.
-- Lập plan triển khai theo feature nhỏ, có tiêu chí hoàn thành.
-- Với repo git: kiểm tra `git status`, dùng feature-based branch rõ ràng, giữ diff gọn, chạy check liên quan, sau đó tóm tắt theo kiểu PR-ready.
-- Merge/delete branch chỉ làm khi bạn xác nhận rõ.
-- Dừng lại hỏi confirm khi cần gửi dữ liệu ra ngoài, đụng file nhạy cảm, chạy lệnh nguy hiểm, hoặc thay đổi có rủi ro.
+- Receive tasks through CLI, WebSocket, or `POST /api/tasks`.
+- For product ideas, research the market path before implementation: target users, pain points, distribution channels, risks, and MVP scope.
+- Build feature by feature with clear completion criteria.
+- In git repositories, inspect `git status`, use focused changes, run relevant checks, and summarize a PR-ready diff.
+- Never merge or delete branches without explicit approval.
+- Ask for confirmation before outbound requests, sensitive file access, risky commands, or high-impact changes.
 
-Vai trò tool dự kiến:
+Expected tool roles:
 
-- Research: ChatGPT/Gemini/Chrome/Edge hoặc `web_search`, nhưng mọi outbound query phải qua confirm và không được chứa private data.
-- Implementation: Codex/Claude/Gemini/Cursor qua adapter riêng hoặc CLI tool tương ứng.
-- Repo delivery: feature branch, PR summary, review diff, test/check, merge an toàn sau confirm.
+- Research: browser/ChatGPT/Gemini/Chrome/Edge adapters or `web_search`, with confirmation for every outbound query.
+- Implementation: local file tools, shell, code runners, and optional adapters for Codex/Claude/Gemini/Cursor.
+- Delivery: git status, diff, log, PR-ready summaries, and safe merge steps after confirmation.
 
-Hiện source này đã có cổng task/confirm và tool local cơ bản. Tích hợp trực tiếp ChatGPT/Gemini/Chrome/Edge/Codex/Claude/Cursor cần thêm adapter/tool cụ thể cho từng app.
+This repository currently includes the core local tools and task/confirmation API. Direct integrations with ChatGPT, Gemini, Chrome, Edge, Codex, Claude, or Cursor require additional adapters.
 
 ## Tools
 
-| Tool | Mô tả | Cần confirm? |
-|------|-------|--------------|
-| `run_shell` | Chạy bash/PowerShell | ✅ Có (nếu rm, sudo, v.v.) |
-| `read_file` | Đọc file (có line numbers) | ✅ Nếu path nhạy cảm |
-| `write_file` | Ghi file | ✅ Luôn |
-| `patch_file` | Thay thế string trong file | ✅ Nếu path nhạy cảm |
-| `list_dir` | Liệt kê thư mục | ✅ Nếu path nhạy cảm |
-| `search_files` | Tìm text trong files | ✅ Nếu path nhạy cảm |
-| `run_python` | Chạy Python code | ✅ Có |
-| `run_nodejs` | Chạy Node.js code | ✅ Có |
-| `computer_click` | Click vào tọa độ màn hình | ✅ Có |
-| `computer_type` | Gõ text vào app/window đang active | ✅ Có |
-| `computer_press` | Bấm một phím trong app/window đang active | ✅ Có |
-| `computer_hotkey` | Bấm tổ hợp phím như `command+l`, `ctrl+c` | ✅ Có |
-| `computer_screenshot` | Chụp màn hình desktop hiện tại | ❌ |
-| `computer_position` | Lấy vị trí chuột hiện tại nếu backend hỗ trợ | ❌ |
-| `web_search` | Tìm kiếm DuckDuckGo (gửi query ra Internet) | ✅ Luôn |
-| `git_status` | Git status | ❌ |
-| `git_diff` | Git diff | ❌ |
-| `git_log` | Git log | ❌ |
+| Tool | Description | Confirmation |
+|---|---|---|
+| `run_shell` | Run bash/PowerShell commands | Required for risky patterns |
+| `read_file` | Read a file with line numbers | Required for sensitive paths |
+| `write_file` | Write or overwrite a file | Always |
+| `patch_file` | Replace a unique string in a file | Required for sensitive paths |
+| `list_dir` | List directory contents | Required for sensitive paths |
+| `search_files` | Search files recursively | Required for sensitive paths |
+| `run_python` | Run a Python snippet | Required for risky/outbound patterns |
+| `run_nodejs` | Run a Node.js snippet | Required for risky/outbound patterns |
+| `computer_click` | Click screen coordinates | Always unless auto-confirm is enabled |
+| `computer_type` | Type text into the active app/window | Always unless auto-confirm is enabled |
+| `computer_press` | Press a key in the active app/window | Always unless auto-confirm is enabled |
+| `computer_hotkey` | Press a key combination such as `command+l` or `ctrl+c` | Always unless auto-confirm is enabled |
+| `computer_screenshot` | Capture the current desktop | No |
+| `computer_position` | Get the current mouse position when supported | No |
+| `web_search` | Search DuckDuckGo; query leaves the machine | Always |
+| `git_status` | Show git status | No |
+| `git_diff` | Show git diff | No |
+| `git_log` | Show recent commits | No |
 
 ## Privacy Boundary
 
-Agent mặc định chạy local, nhưng một số tool vẫn có rủi ro lộ dữ liệu nếu dùng sai. Boundary hiện tại:
+The agent runs locally, but some tools can still leak data if used carelessly. The current boundary:
 
-- Chặn đọc private key/secret store như `.ssh/id_*`, `.gnupg/`, macOS Keychains, Windows Credentials.
-- Yêu cầu xác nhận khi đụng file nhạy cảm như `.env`, `.npmrc`, `.pypirc`, `.aws/`, `.azure/`, Docker config, file `secret*` hoặc `credentials*`.
-- Yêu cầu xác nhận cho mọi `web_search` vì query sẽ rời khỏi máy qua DuckDuckGo.
-- Yêu cầu xác nhận khi shell/code có dấu hiệu gọi mạng outbound như `curl`, `wget`, `scp`, `rsync`, `requests`, `httpx`, `fetch`, `axios`.
-- Chặn gửi text giống secret/token/password/private key vào external tool.
-- Nếu action cần xác nhận nhưng không có kênh xác nhận, agent sẽ từ chối chạy thay vì tự động cho qua.
+- Blocks private key and secret-store paths such as `.ssh/id_*`, `.gnupg/`, macOS Keychains, and Windows Credentials.
+- Requires confirmation for sensitive paths such as `.env`, `.npmrc`, `.pypirc`, `.aws/`, `.azure/`, Docker config, and files named `secret*` or `credentials*`.
+- Requires confirmation for every `web_search` query because it leaves the machine.
+- Requires confirmation when shell/code appears to make outbound requests with tools or libraries such as `curl`, `wget`, `scp`, `rsync`, `requests`, `httpx`, `fetch`, or `axios`.
+- Blocks sending secret-like text to external tools.
+- Refuses actions that need confirmation when there is no confirmation channel.
 
-Lưu ý: boundary này là lớp guardrail ứng dụng, không thay thế sandbox OS. Nếu muốn dùng cho dữ liệu nhạy cảm thật, nên chạy agent trong workspace riêng, dùng account quyền thấp, và tắt/kiểm soát các tool outbound.
+This is an application-level guardrail, not an operating-system sandbox. For sensitive work, use a dedicated workspace, a low-privilege account, and controlled outbound tools.
 
-## Thêm tool mới
+## Add a New Tool
 
-1. Tạo file `agent/tools/my_tool.py`:
+1. Create `agent/tools/my_tool.py`:
 
 ```python
 async def my_tool(arg1: str, arg2: int = 5) -> str:
-    # logic của bạn
+    # Your tool logic here.
     return "result"
 ```
 
-2. Đăng ký trong `agent/tools/registry.py`:
+2. Register it in `agent/tools/registry.py`:
 
 ```python
 from agent.tools.my_tool import my_tool
 
 TOOLS["my_tool"] = {
     "fn": my_tool,
-    "description": "Mô tả ngắn gọn cho LLM hiểu",
+    "description": "Short description for the LLM.",
     "args": {"arg1": "string", "arg2": "int (optional)"},
     "dangerous": False,
 }
 ```
 
-Vậy là xong — agent tự động biết dùng tool mới.
+The agent will then be able to call the tool.
 
-## Cấu hình
+## Configuration
 
-Chỉnh `config/default.yaml` hoặc dùng biến môi trường:
+Edit `config/default.yaml` or use environment variables:
 
 ```bash
 AGENT_MODEL=qwen3:8b
 OLLAMA_URL=http://localhost:11434
-AGENT_DEFAULT_TASK="Học một chủ đề system design/conventions/DevOps và tổng hợp cách áp dụng vào dự án"
+AGENT_DEFAULT_TASK="Learn one system design/conventions/DevOps topic and summarize how to apply it to a project"
 ```
 
-## Models được khuyến nghị
+## Recommended Models
 
-| Model | Vai trò | VRAM | Ghi chú |
-|-------|--------|------|---------|
-| `qwen3:8b` | Orchestrator | ~5-6GB | Research, planning, điều phối |
-| `qwen2.5-coder:7b` | Coding | ~5GB | Nhanh, tốt cho code |
-| `qwen2.5-coder:14b` | Coding | ~10GB | Mạnh hơn |
-| `deepseek-coder-v2:16b` | Coding | ~12GB | Mạnh, chậm hơn |
-| `codellama:7b` | Coding nhẹ | ~5GB | Option thay thế |
+| Model | Role | VRAM | Notes |
+|---|---|---|---|
+| `qwen3:8b` | Orchestrator | ~5-6GB | Research, planning, coordination |
+| `qwen2.5-coder:7b` | Coding | ~5GB | Fast and solid for code |
+| `qwen2.5-coder:14b` | Coding | ~10GB | Stronger |
+| `deepseek-coder-v2:16b` | Coding | ~12GB | Strong, slower |
+| `codellama:7b` | Light coding | ~5GB | Alternative option |
 
-**Không có GPU?** Chạy CPU-only (chậm hơn ~5-10x):
+No GPU? CPU-only works, but is slower:
+
 ```bash
-ollama pull qwen2.5-coder:3b  # model 3B nhẹ hơn cho CPU
+ollama pull qwen2.5-coder:3b  # lighter 3B model for CPU
 ```
 
-## Kiến trúc
+## Architecture
 
-```
+```text
 main.py
 ├── interfaces/
 │   ├── cli.py           # Rich terminal UI
@@ -307,4 +310,4 @@ main.py
 
 ## License
 
-MIT — dùng thoải mái, không cần credit.
+MIT. Use freely.

@@ -1,5 +1,5 @@
 """
-File operations — đọc, ghi, tìm kiếm file cho coding agent.
+File operations: read, write, and search files for the coding agent.
 """
 from __future__ import annotations
 

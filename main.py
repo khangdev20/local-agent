@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main entrypoint — chạy CLI hoặc Web server.
+Main entrypoint: run the CLI or Web server.
 
 Usage:
   python main.py                     # CLI interactive mode
@@ -20,11 +20,11 @@ def main():
         epilog="""
 Examples:
   python main.py                          # interactive CLI
-  python main.py "đọc file main.py"       # one-shot
+  python main.py "read main.py"           # one-shot
   python main.py --default-task           # run idle engineering learning task
   python main.py --web                    # Web UI at http://localhost:8000
-  python main.py --model qwen3:8b        # dùng model khác
-  python main.py --yes "xóa cache"       # auto-confirm nguy hiểm
+  python main.py --model qwen3:8b        # use another model
+  python main.py --yes "clean cache"     # dangerous auto-confirm mode
         """
     )
     parser.add_argument("task", nargs="?", help="Task (one-shot mode)")

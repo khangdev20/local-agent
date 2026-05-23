@@ -1,6 +1,6 @@
 """
-Tool registry — tất cả tools được đăng ký ở đây.
-Thêm tool mới: tạo file trong agent/tools/, import và thêm vào TOOLS dict.
+Tool registry: all tools are registered here.
+To add a new tool, create a file in agent/tools/, import it, and add it to TOOLS.
 """
 from __future__ import annotations
 

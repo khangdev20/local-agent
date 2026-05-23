@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Setup script — cài đặt dependencies và kiểm tra môi trường.
-Chạy: python setup.py
+Setup script: install dependencies and check the environment.
+Run: python setup.py
 """
 import subprocess
 import sys
@@ -26,7 +26,7 @@ def check_python():
     if v >= (3, 10):
         ok(f"Python {v.major}.{v.minor}.{v.micro}")
     else:
-        err(f"Python {v.major}.{v.minor} — cần 3.10+")
+        err(f"Python {v.major}.{v.minor} — requires 3.10+")
         sys.exit(1)
 
 

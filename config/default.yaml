@@ -1,45 +1,45 @@
 # config/default.yaml
-# Chỉnh sửa file này theo môi trường của bạn
+# Edit this file for your local environment.
 
 agent:
-  model: "qwen3:8b"             # Model Ollama mặc định cho orchestrator
+  model: "qwen3:8b"             # Default Ollama model for orchestration
   ollama_url: "http://localhost:11434"
-  max_steps: 15                  # Số bước tối đa mỗi task
-  temperature: 0.2               # Thấp hơn = deterministic hơn
-  default_task: |                 # Task chạy khi user để trống / bấm Run Default
-    Không có task user giao ngay lúc này.
-    Hãy nghiên cứu và học một chủ đề kỹ thuật có thể áp dụng cho dự án:
-    system design/architecture, web/app design và UX patterns, coding convention
-    cho Next.js, React, Node.js, Fastify, .NET, React Native, NestJS hoặc các stack liên quan,
+  max_steps: 15                  # Maximum steps per task
+  temperature: 0.2               # Lower = more deterministic
+  default_task: |                 # Runs when the user leaves the task empty / clicks Run Default
+    There is no user-assigned task right now.
+    Research and learn one engineering topic that can be applied to projects:
+    system design/architecture, web/app design and UX patterns, coding conventions
+    for Next.js, React, Node.js, Fastify, .NET, React Native, NestJS, or related stacks,
     DevOps, CI/CD, observability, deployment, security, reliability.
-    Ưu tiên official docs, framework guides, engineering blogs trưởng thành,
-    và ví dụ production-grade. Tổng hợp ngắn gọn bằng tiếng Việt gồm:
-    chủ đề đã học, nguyên tắc chính, convention/checklist cụ thể,
-    cách áp dụng vào dự án thật, và một follow-up improvement/experiment.
-    Nếu có adapter browser/ChatGPT web trong tool registry thì có thể dùng;
-    nếu không, dùng web_search.
+    Prefer official docs, framework guides, mature engineering blogs,
+    and production-grade examples. Summarize concisely in English with:
+    the topic studied, key principles, concrete conventions/checklist items,
+    how to apply it to a real project, and one follow-up improvement/experiment.
+    If a browser/ChatGPT web adapter exists in the tool registry, use it;
+    otherwise use web_search.
 
 memory:
   db_path: "~/.local-agent/memory.db"
-  max_short_term: 20             # Số turn giữ trong context
+  max_short_term: 20             # Number of turns kept in context
 
 web:
   host: "0.0.0.0"
   port: 8000
 
 safety:
-  auto_confirm: false            # true = bỏ qua xác nhận (nguy hiểm!)
-  privacy_boundary: true         # chặn secret/private key, confirm path nhạy cảm và outbound request
-  confirm_external_tools: true   # web_search luôn hỏi vì query rời khỏi máy
-  blocked_patterns:              # Luôn bị chặn
+  auto_confirm: false            # true = skip confirmations (dangerous!)
+  privacy_boundary: true         # block secrets/private keys and confirm sensitive/outbound actions
+  confirm_external_tools: true   # web_search always asks because queries leave this machine
+  blocked_patterns:              # Always blocked
     - "rm -rf /"
     - "format C:"
 
-# Models được khuyến nghị:
-# - qwen3:8b              (8B, orchestrator/research/planning mặc định)
+# Recommended models:
+# - qwen3:8b              (8B, default orchestrator/research/planning model)
 # Coding/implementation:
-# - qwen2.5-coder:7b       (7B, cần ~5GB VRAM, tốt nhất cho code)
-# - qwen2.5-coder:14b      (14B, cần ~10GB VRAM, mạnh hơn)
-# - deepseek-coder-v2:16b  (16B, cần ~12GB VRAM, rất mạnh)
-# - codellama:7b           (7B, option thay thế)
+# - qwen2.5-coder:7b       (7B, needs ~5GB VRAM, solid for coding)
+# - qwen2.5-coder:14b      (14B, needs ~10GB VRAM, stronger)
+# - deepseek-coder-v2:16b  (16B, needs ~12GB VRAM, very strong)
+# - codellama:7b           (7B, alternative option)
 # - mistral:7b             (7B, general purpose)

@@ -1,6 +1,6 @@
 """
-Agent Core — ReAct (Reason + Act) loop với Ollama backend.
-Hỗ trợ streaming, tool-calling, và memory management.
+Agent core: ReAct (Reason + Act) loop with an Ollama backend.
+Supports streaming, tool calling, and memory management.
 """
 from __future__ import annotations
 

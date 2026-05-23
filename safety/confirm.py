@@ -1,6 +1,6 @@
 """
-Safety Gate — kiểm tra và yêu cầu xác nhận cho các lệnh nguy hiểm.
-Human-in-the-loop: agent hỏi người dùng trước khi thực thi.
+Safety gate: checks dangerous actions and asks for confirmation.
+Human-in-the-loop: the agent asks before execution.
 """
 from __future__ import annotations
 

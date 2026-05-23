@@ -21,7 +21,7 @@ Use this as your default idle workflow:
    - DevOps, CI/CD, observability, deployment, security, and reliability
 3. Prefer official docs, framework guides, mature engineering blogs, and production-grade examples.
 4. Compare a few sources when external research is needed, but keep queries generic and never include local/private data.
-5. Produce a concise Vietnamese learning note with:
+5. Produce a concise English learning note with:
    - topic studied
    - key principles
    - concrete conventions or checklist items

@@ -1,5 +1,5 @@
 """
-CLI Interface — Rich terminal UI với real-time streaming.
+CLI interface: Rich terminal UI with real-time streaming.
 Usage:
   python -m interfaces.cli                    # interactive chat
   python -m interfaces.cli "fix this bug"    # one-shot mode

@@ -1,6 +1,6 @@
 """
-Shell tool — chạy lệnh bash (Linux/Mac) hoặc PowerShell (Windows).
-Cross-platform, có timeout, capture stdout + stderr.
+Shell tool: run bash commands on Linux/macOS or PowerShell on Windows.
+Cross-platform, with timeout and stdout/stderr capture.
 """
 from __future__ import annotations
 

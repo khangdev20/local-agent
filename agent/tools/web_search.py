@@ -1,6 +1,6 @@
 """
-Web search via DuckDuckGo — không cần API key.
-Dùng httpx để fetch HTML và parse kết quả.
+Web search via DuckDuckGo with no API key required.
+Uses httpx to fetch HTML and parse results.
 """
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 """
-Web API — FastAPI backend với WebSocket streaming.
-Chạy: uvicorn interfaces.web.api:app --reload --port 8000
+Web API: FastAPI backend with WebSocket streaming.
+Run: uvicorn interfaces.web.api:app --reload --port 8000
 """
 from __future__ import annotations
 
