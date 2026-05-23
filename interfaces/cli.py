@@ -3,7 +3,7 @@ CLI Interface — Rich terminal UI với real-time streaming.
 Usage:
   python -m interfaces.cli                    # interactive chat
   python -m interfaces.cli "fix this bug"    # one-shot mode
-  python -m interfaces.cli --model qwen2.5-coder:7b
+  python -m interfaces.cli --model qwen3:8b
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from rich.table import Table
 from rich.text import Text
 
 from agent.core import Agent, Step
-from safety.confirm import SafetyGate
+from agent.default_task import get_default_task
 
 app = typer.Typer(help="Local AI Coding Agent — powered by Ollama")
 console = Console()
@@ -34,13 +34,14 @@ console = Console()
 @app.command()
 def chat(
     task: Optional[str] = typer.Argument(None, help="One-shot task (skip interactive mode)"),
-    model: str = typer.Option("qwen2.5-coder:7b", "--model", "-m", help="Ollama model name"),
+    model: str = typer.Option("qwen3:8b", "--model", "-m", help="Ollama model name"),
     ollama_url: str = typer.Option("http://localhost:11434", "--url", help="Ollama API URL"),
     auto_confirm: bool = typer.Option(False, "--yes", "-y", help="Auto-confirm all actions"),
     max_steps: int = typer.Option(15, "--max-steps", help="Max agent steps per task"),
+    run_default: bool = typer.Option(False, "--default-task", help="Run the default idle engineering learning task once"),
 ):
     """Start the AI coding agent."""
-    asyncio.run(_main(task, model, ollama_url, auto_confirm, max_steps))
+    asyncio.run(_main(task, model, ollama_url, auto_confirm, max_steps, run_default))
 
 
 @app.command()
@@ -67,7 +68,7 @@ def history(n: int = typer.Option(10, "--n", help="Number of recent turns to sho
 
 # ── Main async logic ──────────────────────────────────────────────────────────
 
-async def _main(task, model, ollama_url, auto_confirm, max_steps):
+async def _main(task, model, ollama_url, auto_confirm, max_steps, run_default):
     _print_banner(model)
 
     # Check Ollama is running
@@ -82,12 +83,14 @@ async def _main(task, model, ollama_url, auto_confirm, max_steps):
     )
     agent.safety.auto_confirm = auto_confirm
 
-    if task:
+    if run_default and not task:
+        await _run_task(agent, get_default_task(), display_task="Default idle task")
+    elif task:
         # One-shot mode
         await _run_task(agent, task)
     else:
         # Interactive chat loop
-        console.print("[dim]Type your task. Commands: /exit /history /clear /models[/dim]\n")
+        console.print("[dim]Type your task. Press Enter on an empty prompt to run the default idle task. Commands: /exit /history /clear /models /default[/dim]\n")
         while True:
             try:
                 user_input = Prompt.ask("[bold cyan]You[/]")
@@ -96,6 +99,7 @@ async def _main(task, model, ollama_url, auto_confirm, max_steps):
                 break
 
             if not user_input.strip():
+                await _run_task(agent, get_default_task(), display_task="Default idle task")
                 continue
 
             cmd = user_input.strip().lower()
@@ -114,15 +118,18 @@ async def _main(task, model, ollama_url, auto_confirm, max_steps):
             elif cmd == "/models":
                 await _list_models(ollama_url)
                 continue
+            elif cmd == "/default":
+                await _run_task(agent, get_default_task(), display_task="Default idle task")
+                continue
 
             await _run_task(agent, user_input)
 
     await agent.close()
 
 
-async def _run_task(agent: Agent, task: str):
+async def _run_task(agent: Agent, task: str, display_task: str | None = None):
     console.print()
-    console.print(Rule(f"[bold]Task[/]"))
+    console.print(Rule(f"[bold]{display_task or 'Task'}[/]"))
 
     step_count = 0
     final_answer = ""
@@ -211,7 +218,7 @@ async def _check_ollama(url: str) -> bool:
         "[yellow]Start Ollama:[/]\n"
         "  ollama serve\n\n"
         "[yellow]Install a model:[/]\n"
-        "  ollama pull qwen2.5-coder:7b",
+        "  ollama pull qwen3:8b",
         title="[red]Ollama Not Found[/]",
         border_style="red",
     ))

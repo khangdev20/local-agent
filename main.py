@@ -21,8 +21,9 @@ def main():
 Examples:
   python main.py                          # interactive CLI
   python main.py "đọc file main.py"       # one-shot
+  python main.py --default-task           # run idle engineering learning task
   python main.py --web                    # Web UI at http://localhost:8000
-  python main.py --model qwen2.5:14b     # dùng model khác
+  python main.py --model qwen3:8b        # dùng model khác
   python main.py --yes "xóa cache"       # auto-confirm nguy hiểm
         """
     )
@@ -30,10 +31,11 @@ Examples:
     parser.add_argument("--web", action="store_true", help="Start Web UI server")
     parser.add_argument("--port", type=int, default=8000, help="Web server port")
     parser.add_argument("--host", default="0.0.0.0", help="Web server host")
-    parser.add_argument("--model", default="qwen2.5-coder:7b", help="Ollama model")
+    parser.add_argument("--model", default="qwen3:8b", help="Ollama model")
     parser.add_argument("--url", default="http://localhost:11434", help="Ollama URL")
     parser.add_argument("--yes", "-y", action="store_true", help="Auto-confirm actions")
     parser.add_argument("--max-steps", type=int, default=15, help="Max agent steps")
+    parser.add_argument("--default-task", action="store_true", help="Run default idle engineering learning task once")
 
     args = parser.parse_args()
 
@@ -59,7 +61,7 @@ Examples:
         sys.argv = [sys.argv[0]]
         if args.task:
             sys.argv.append(args.task)
-        if args.model != "qwen2.5-coder:7b":
+        if args.model != "qwen3:8b":
             sys.argv.extend(["--model", args.model])
         if args.url != "http://localhost:11434":
             sys.argv.extend(["--url", args.url])
@@ -67,6 +69,8 @@ Examples:
             sys.argv.append("--yes")
         if args.max_steps != 15:
             sys.argv.extend(["--max-steps", str(args.max_steps)])
+        if args.default_task:
+            sys.argv.append("--default-task")
 
         from interfaces.cli import app
         app()

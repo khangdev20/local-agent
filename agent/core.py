@@ -29,6 +29,13 @@ RULES:
 - Always use EXACT format below for tool calls
 - After getting a tool result, reason about it before the next step
 - When done, provide a clear summary
+- For product ideas: first clarify the user goal, research the path to market, identify target users, distribution channels, risks, and an implementation plan before changing code
+- For implementation: work feature-by-feature, inspect git status first, use a clear feature branch when the repo is under git, keep changes scoped, run relevant checks, then summarize a PR-ready diff
+- For merges: never merge or delete branches without explicit user approval; prefer PR-style review and safe merge steps
+- Use external research tools only with confirmation, and never include private local data in research queries
+- Privacy boundary: do not read secrets, credentials, browser profiles, keychains, SSH/GPG keys, or private user files unless the user explicitly asks for that exact data
+- Privacy boundary: never send local file contents, credentials, environment variables, tokens, or proprietary code to external tools such as web_search
+- Prefer local tools over network tools; ask the user before any outbound request
 
 TOOL CALL FORMAT (use exactly):
 <tool_call>
@@ -65,7 +72,7 @@ class AgentResult:
 class Agent:
     def __init__(
         self,
-        model: str = "qwen2.5-coder:7b",
+        model: str = "qwen3:8b",
         ollama_url: str = "http://localhost:11434",
         max_steps: int = 15,
         temperature: float = 0.2,
@@ -136,13 +143,17 @@ class Agent:
             tool_name, tool_args = tool_call
             thought = self._extract_thought(response_text)
 
-            # 3. Safety check for dangerous tools
-            if self.safety.requires_confirmation(tool_name, tool_args):
-                approved = True
+            # 3. Safety/privacy check before any tool execution
+            is_blocked, blocked_reason = self.safety.is_blocked(tool_name, tool_args)
+            if is_blocked:
+                tool_result = f"Blocked by safety/privacy gate: {blocked_reason}"
+            elif self.safety.requires_confirmation(tool_name, tool_args):
                 if confirm_fn:
                     approved = await confirm_fn(tool_name, tool_args)
+                else:
+                    approved = False
                 if not approved:
-                    tool_result = "User declined this action."
+                    tool_result = "Action requires human confirmation and was not executed."
                 else:
                     tool_result = await self._execute_tool(tool_name, tool_args)
             else:

@@ -38,12 +38,12 @@ def check_ollama():
         if models:
             ok(f"Models available: {', '.join(models)}")
         else:
-            warn("No models installed. Run: ollama pull qwen2.5-coder:7b")
+            warn("No models installed. Run: ollama pull qwen3:8b")
     else:
         err("Ollama not found")
         print(f"\n  Install from: https://ollama.com\n")
         print("  Then run:")
-        print("    ollama pull qwen2.5-coder:7b\n")
+        print("    ollama pull qwen3:8b\n")
 
 
 def install_deps():
@@ -83,7 +83,7 @@ def main():
     print(f"{GREEN}Setup complete!{RESET}\n")
     print("Next steps:")
     print("  1. Start Ollama:     ollama serve")
-    print("  2. Pull a model:     ollama pull qwen2.5-coder:7b")
+    print("  2. Pull a model:     ollama pull qwen3:8b")
     print("  3. Run CLI:          python main.py")
     print("  4. Run Web UI:       python main.py --web")
     print(f"{'='*50}\n")

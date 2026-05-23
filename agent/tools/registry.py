@@ -11,6 +11,14 @@ from agent.tools.file_ops import read_file, write_file, list_dir, search_files, 
 from agent.tools.code_runner import run_python, run_nodejs
 from agent.tools.web_search import web_search
 from agent.tools.git_ops import git_status, git_diff, git_log
+from agent.tools.computer_use import (
+    computer_click,
+    computer_hotkey,
+    computer_position,
+    computer_press,
+    computer_screenshot,
+    computer_type,
+)
 
 
 # ── Tool registry ─────────────────────────────────────────────────────────────
@@ -69,6 +77,44 @@ TOOLS: dict[str, dict] = {
         "description": "Execute a Node.js snippet and return output.",
         "args": {"code": "string — JavaScript code", "timeout": "int (optional, default 30)"},
         "dangerous": True,
+    },
+
+    # Computer use
+    "computer_click": {
+        "fn": computer_click,
+        "description": "Click at screen coordinates in the active desktop session.",
+        "args": {"x": "int — screen x coordinate", "y": "int — screen y coordinate", "clicks": "int (optional, default 1)", "button": "string (optional: left/right/middle)"},
+        "dangerous": True,
+    },
+    "computer_type": {
+        "fn": computer_type,
+        "description": "Type text into the active application/window.",
+        "args": {"text": "string — text to type", "interval": "float (optional, default 0.0 seconds between chars)"},
+        "dangerous": True,
+    },
+    "computer_press": {
+        "fn": computer_press,
+        "description": "Press a single key in the active application/window.",
+        "args": {"key": "string — key name, e.g. enter, tab, escape, left", "presses": "int (optional, default 1)"},
+        "dangerous": True,
+    },
+    "computer_hotkey": {
+        "fn": computer_hotkey,
+        "description": "Press a key combination in the active application/window.",
+        "args": {"keys": "array[string] — e.g. ['command', 'l'] or ['ctrl', 'c']"},
+        "dangerous": True,
+    },
+    "computer_screenshot": {
+        "fn": computer_screenshot,
+        "description": "Take a screenshot of the current desktop and return the saved image path.",
+        "args": {"path": "string (optional) — output PNG path"},
+        "dangerous": False,
+    },
+    "computer_position": {
+        "fn": computer_position,
+        "description": "Return the current mouse position when supported by the local backend.",
+        "args": {},
+        "dangerous": False,
     },
 
     # Web

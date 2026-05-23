@@ -190,7 +190,7 @@
     <div class="sidebar-section">Model</div>
     <div class="model-select">
       <select id="model-select" onchange="changeModel(this.value)">
-        <option value="qwen2.5-coder:7b">qwen2.5-coder:7b</option>
+        <option value="qwen3:8b">qwen3:8b</option>
       </select>
     </div>
 
@@ -215,6 +215,7 @@
   <div class="main">
     <div class="toolbar">
       <span class="toolbar-title">Chat</span>
+      <button class="btn primary" onclick="sendDefaultTask()">Run Default</button>
       <button class="btn" onclick="clearChat()">Clear Chat</button>
       <button class="btn danger" onclick="clearHistory()">Clear Memory</button>
     </div>
@@ -237,7 +238,7 @@
     <div class="input-area">
       <div class="input-row">
         <div class="input-wrap">
-          <textarea id="task-input" placeholder="Mô tả task cho AI agent..." rows="1"
+          <textarea id="task-input" placeholder="Mô tả task, hoặc để trống để chạy default task..." rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
           <button class="send-btn" id="send-btn" onclick="sendTask()">↑</button>
         </div>
@@ -263,7 +264,13 @@ const TOOLS = [
   { name: 'search_files', safe: true },
   { name: 'run_python', safe: false },
   { name: 'run_nodejs', safe: false },
-  { name: 'web_search', safe: true },
+  { name: 'computer_click', safe: false },
+  { name: 'computer_type', safe: false },
+  { name: 'computer_press', safe: false },
+  { name: 'computer_hotkey', safe: false },
+  { name: 'computer_screenshot', safe: true },
+  { name: 'computer_position', safe: true },
+  { name: 'web_search', safe: false },
   { name: 'git_status', safe: true },
   { name: 'git_diff', safe: true },
   { name: 'git_log', safe: true },
@@ -350,21 +357,26 @@ function handleEvent(event) {
 }
 
 // ── Send task ────────────────────────────────────────────────────────────────
-function sendTask() {
+function sendTask(taskOverride = null, labelOverride = null) {
   const input = document.getElementById('task-input');
-  const task = input.value.trim();
-  if (!task || isRunning || !ws) return;
+  const task = taskOverride === null ? input.value.trim() : taskOverride;
+  const label = labelOverride || task || 'Default idle task';
+  if (isRunning || !ws) return;
 
   // Remove welcome
   const welcome = document.getElementById('welcome');
   if (welcome) welcome.remove();
 
-  appendUserMessage(task);
+  appendUserMessage(label);
   input.value = '';
   autoResize(input);
   setRunning(true);
 
   ws.send(JSON.stringify({ task }));
+}
+
+function sendDefaultTask() {
+  sendTask('', 'Default idle task');
 }
 
 function handleKey(e) {

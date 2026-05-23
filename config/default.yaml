@@ -2,10 +2,22 @@
 # Chỉnh sửa file này theo môi trường của bạn
 
 agent:
-  model: "qwen2.5-coder:7b"     # Model Ollama mặc định
+  model: "qwen3:8b"             # Model Ollama mặc định cho orchestrator
   ollama_url: "http://localhost:11434"
   max_steps: 15                  # Số bước tối đa mỗi task
   temperature: 0.2               # Thấp hơn = deterministic hơn
+  default_task: |                 # Task chạy khi user để trống / bấm Run Default
+    Không có task user giao ngay lúc này.
+    Hãy nghiên cứu và học một chủ đề kỹ thuật có thể áp dụng cho dự án:
+    system design/architecture, web/app design và UX patterns, coding convention
+    cho Next.js, React, Node.js, Fastify, .NET, React Native, NestJS hoặc các stack liên quan,
+    DevOps, CI/CD, observability, deployment, security, reliability.
+    Ưu tiên official docs, framework guides, engineering blogs trưởng thành,
+    và ví dụ production-grade. Tổng hợp ngắn gọn bằng tiếng Việt gồm:
+    chủ đề đã học, nguyên tắc chính, convention/checklist cụ thể,
+    cách áp dụng vào dự án thật, và một follow-up improvement/experiment.
+    Nếu có adapter browser/ChatGPT web trong tool registry thì có thể dùng;
+    nếu không, dùng web_search.
 
 memory:
   db_path: "~/.local-agent/memory.db"
@@ -17,11 +29,15 @@ web:
 
 safety:
   auto_confirm: false            # true = bỏ qua xác nhận (nguy hiểm!)
+  privacy_boundary: true         # chặn secret/private key, confirm path nhạy cảm và outbound request
+  confirm_external_tools: true   # web_search luôn hỏi vì query rời khỏi máy
   blocked_patterns:              # Luôn bị chặn
     - "rm -rf /"
     - "format C:"
 
-# Models được khuyến nghị cho coding:
+# Models được khuyến nghị:
+# - qwen3:8b              (8B, orchestrator/research/planning mặc định)
+# Coding/implementation:
 # - qwen2.5-coder:7b       (7B, cần ~5GB VRAM, tốt nhất cho code)
 # - qwen2.5-coder:14b      (14B, cần ~10GB VRAM, mạnh hơn)
 # - deepseek-coder-v2:16b  (16B, cần ~12GB VRAM, rất mạnh)
