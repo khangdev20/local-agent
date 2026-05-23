@@ -58,9 +58,10 @@ Examples:
     else:
         # CLI mode
         import sys
-        sys.argv = [sys.argv[0]]
-        if args.task:
-            sys.argv.append(args.task)
+
+        cli_command = args.task if args.task in {"history", "models"} else "chat"
+        sys.argv = [sys.argv[0], cli_command]
+
         if args.model != "qwen3:8b":
             sys.argv.extend(["--model", args.model])
         if args.url != "http://localhost:11434":
@@ -71,6 +72,8 @@ Examples:
             sys.argv.extend(["--max-steps", str(args.max_steps)])
         if args.default_task:
             sys.argv.append("--default-task")
+        if args.task and cli_command == "chat":
+            sys.argv.append(args.task)
 
         from interfaces.cli import app
         app()
