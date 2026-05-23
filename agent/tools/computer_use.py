@@ -17,6 +17,39 @@ from pathlib import Path
 IS_DARWIN = platform.system() == "Darwin"
 IS_LINUX = platform.system() == "Linux"
 IS_WINDOWS = platform.system() == "Windows"
+MAX_OBSERVE_CHARS = 12_000
+
+
+async def computer_observe(max_depth: int = 3, max_items: int = 120) -> str:
+    """
+    Observe the active app/window.
+
+    On macOS this reads the Accessibility tree, including roles, labels,
+    values, positions, and sizes when available. This gives the agent text it
+    can reason over before clicking or typing.
+    """
+    max_depth = max(0, min(int(max_depth), 6))
+    max_items = max(1, min(int(max_items), 500))
+
+    if IS_DARWIN:
+        result = await _run_command([
+            "osascript",
+            "-e",
+            MAC_OBSERVE_SCRIPT,
+            str(max_depth),
+            str(max_items),
+        ])
+        if result.startswith("Error:"):
+            return result + "\nGrant Accessibility permission to Terminal/Python/System Events, then retry."
+        return _truncate_observation(result)
+
+    if IS_LINUX:
+        return "Error: screen observation is not implemented for Linux yet. Install an AT-SPI/xdotool adapter or use browser-specific automation."
+
+    if IS_WINDOWS:
+        return "Error: screen observation is not implemented for Windows yet. Install a UI Automation adapter."
+
+    return _missing_backend()
 
 
 async def computer_click(x: int, y: int, clicks: int = 1, button: str = "left") -> str:
@@ -169,6 +202,12 @@ async def computer_position() -> str:
     return "Mouse position requires pyautogui on this platform."
 
 
+def _truncate_observation(text: str) -> str:
+    if len(text) <= MAX_OBSERVE_CHARS:
+        return text
+    return text[:MAX_OBSERVE_CHARS] + f"\n... [truncated, {len(text)} chars total]"
+
+
 async def _run_command(args: list[str]) -> str:
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -240,3 +279,90 @@ MAC_KEY_CODES = {
     "down": 125,
     "up": 126,
 }
+
+
+MAC_OBSERVE_SCRIPT = r'''
+on run argv
+  set maxDepth to (item 1 of argv) as integer
+  set maxItems to (item 2 of argv) as integer
+  tell application "System Events"
+    set frontApp to first application process whose frontmost is true
+    set appName to name of frontApp
+    set outText to "Active app: " & appName & linefeed
+    try
+      set win to front window of frontApp
+      try
+        set outText to outText & "Window: " & (name of win as text) & linefeed
+      on error
+        set outText to outText & "Window: <unnamed>" & linefeed
+      end try
+      set outText to outText & my describeElement(win, 0, maxDepth, maxItems)
+    on error errMsg
+      set outText to outText & "Window unavailable: " & errMsg
+    end try
+  end tell
+  return outText
+end run
+
+on describeElement(theElement, depth, maxDepth, maxItems)
+  if depth > maxDepth then return ""
+  set indentText to ""
+  repeat depth times
+    set indentText to indentText & "  "
+  end repeat
+
+  tell application "System Events"
+    set roleText to ""
+    set nameText to ""
+    set valueText to ""
+    set posText to ""
+    set sizeText to ""
+
+    try
+      set roleText to role description of theElement as text
+    on error
+      try
+        set roleText to role of theElement as text
+      end try
+    end try
+
+    try
+      set nameText to name of theElement as text
+    end try
+
+    try
+      set valueText to value of theElement as text
+    end try
+
+    try
+      set p to position of theElement
+      set posText to " pos=(" & (item 1 of p as integer) & "," & (item 2 of p as integer) & ")"
+    end try
+
+    try
+      set s to size of theElement
+      set sizeText to " size=(" & (item 1 of s as integer) & "x" & (item 2 of s as integer) & ")"
+    end try
+
+    set lineText to indentText & "- " & roleText
+    if nameText is not "" then set lineText to lineText & " name=\"" & nameText & "\""
+    if valueText is not "" then set lineText to lineText & " value=\"" & valueText & "\""
+    set lineText to lineText & posText & sizeText & linefeed
+
+    if maxItems <= 1 then return lineText
+
+    try
+      set childItems to UI elements of theElement
+      set remainingItems to maxItems - 1
+      repeat with childItem in childItems
+        if remainingItems <= 0 then exit repeat
+        set childText to my describeElement(childItem, depth + 1, maxDepth, remainingItems)
+        set lineText to lineText & childText
+        set remainingItems to remainingItems - 1
+      end repeat
+    end try
+  end tell
+
+  return lineText
+end describeElement
+'''

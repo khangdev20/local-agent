@@ -10,6 +10,7 @@ import os
 import time
 from uuid import uuid4
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +21,8 @@ from pydantic import BaseModel, Field
 from agent.core import Agent
 from agent.default_task import get_default_task
 from agent.memory import Memory
+from agent.notifications import format_task_status_message, send_telegram_message, telegram_is_configured
+from agent.system_status import get_system_status
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -54,16 +57,25 @@ def get_agent() -> Agent:
     return _agent
 
 
+def get_fast_model() -> str | None:
+    value = os.getenv("AGENT_FAST_MODEL", "").strip()
+    return value or None
+
+
 class TaskRequest(BaseModel):
     task: str = ""
-    model: str | None = None
+    model: Optional[str] = None
     auto_confirm: bool = False
-    max_steps: int | None = Field(default=None, ge=1, le=100)
+    max_steps: Optional[int] = Field(default=None, ge=1, le=100)
 
 
 class ConfirmRequest(BaseModel):
     confirmation_id: str
     confirmed: bool
+
+
+class NotifyRequest(BaseModel):
+    channel: str = "telegram"
 
 
 def _task_view(task_id: str) -> dict:
@@ -79,6 +91,9 @@ def _task_view(task_id: str) -> dict:
         "answer": state.get("answer"),
         "error": state.get("error"),
         "events": state["events"],
+        "notifications": {
+            "telegram_configured": telegram_is_configured(),
+        },
     }
 
 
@@ -87,6 +102,13 @@ def _append_task_event(state: dict, event: dict) -> None:
     state["updated_at"] = time.time()
     if len(state["events"]) > MAX_TASK_EVENTS:
         state["events"] = state["events"][-MAX_TASK_EVENTS:]
+
+
+def _queue_telegram_task_status(task_id: str, state: dict, headline: str | None = None) -> None:
+    if not telegram_is_configured():
+        return
+    message = format_task_status_message(task_id, state, headline=headline)
+    asyncio.create_task(send_telegram_message(message))
 
 
 async def _run_rest_task(task_id: str) -> None:
@@ -110,6 +132,7 @@ async def _run_rest_task(task_id: str) -> None:
         state["status"] = "waiting_confirmation"
         state["pending_confirmation"] = request
         _append_task_event(state, {"type": "confirm_request", "data": request})
+        _queue_telegram_task_status(task_id, state, headline="Local Agent needs confirmation")
 
         try:
             response = await asyncio.wait_for(state["confirm_queue"].get(), timeout=3600.0)
@@ -119,14 +142,17 @@ async def _run_rest_task(task_id: str) -> None:
                 "type": "error",
                 "data": {"message": "Confirmation timed out."},
             })
+            _queue_telegram_task_status(task_id, state, headline="Local Agent confirmation timed out")
             return False
 
         state["pending_confirmation"] = None
         state["status"] = "running"
+        _queue_telegram_task_status(task_id, state, headline="Local Agent resumed")
         return bool(response.get("confirmed"))
 
     state["status"] = "running"
     _append_task_event(state, {"type": "start", "data": {"task": state["task"]}})
+    _queue_telegram_task_status(task_id, state, headline="Local Agent task started")
 
     try:
         async for event in agent.stream(state["task"], confirm_fn=confirm_fn):
@@ -134,13 +160,16 @@ async def _run_rest_task(task_id: str) -> None:
             if event["type"] == "final":
                 state["status"] = "completed"
                 state["answer"] = event["data"].get("answer", "")
+                _queue_telegram_task_status(task_id, state, headline="Local Agent task completed")
             elif event["type"] == "error":
                 state["status"] = "failed"
                 state["error"] = event["data"].get("message", "Unknown error")
+                _queue_telegram_task_status(task_id, state, headline="Local Agent task failed")
     except Exception as e:
         state["status"] = "failed"
         state["error"] = str(e)
         _append_task_event(state, {"type": "error", "data": {"message": str(e)}})
+        _queue_telegram_task_status(task_id, state, headline="Local Agent task failed")
     finally:
         state["updated_at"] = time.time()
         await agent.close()
@@ -162,7 +191,7 @@ async def health():
         async with httpx.AsyncClient(timeout=3.0) as client:
             r = await client.get(f"{agent.ollama_url}/api/tags")
             models = [m["name"] for m in r.json().get("models", [])]
-        return {"status": "ok", "model": agent.model, "models": models}
+        return {"status": "ok", "model": agent.model, "fast_model": get_fast_model(), "models": models}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
@@ -204,6 +233,31 @@ async def get_stats():
     return mem.get_stats()
 
 
+@app.get("/api/system/status")
+async def system_status():
+    return get_system_status()
+
+
+@app.get("/api/notifications")
+async def notification_status():
+    return {
+        "telegram": {
+            "configured": telegram_is_configured(),
+            "env": ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"],
+        }
+    }
+
+
+@app.post("/api/notifications/telegram/test")
+async def test_telegram_notification():
+    sent, detail = await send_telegram_message(
+        "<b>Local Agent notification test</b>\nTelegram notifications are configured."
+    )
+    if not sent:
+        raise HTTPException(status_code=503, detail=detail)
+    return {"status": "sent", "channel": "telegram"}
+
+
 @app.post("/api/tasks")
 async def create_task(body: TaskRequest):
     """Create an async agent task from an external client."""
@@ -226,6 +280,7 @@ async def create_task(body: TaskRequest):
         "events": [],
     }
     TASKS[task_id] = state
+    _queue_telegram_task_status(task_id, state, headline="Local Agent task queued")
     asyncio.create_task(_run_rest_task(task_id))
     return _task_view(task_id)
 
@@ -240,6 +295,24 @@ async def get_task(task_id: str):
     if task_id not in TASKS:
         raise HTTPException(status_code=404, detail="Task not found")
     return _task_view(task_id)
+
+
+@app.post("/api/tasks/{task_id}/notify")
+async def notify_task(task_id: str, body: NotifyRequest):
+    if task_id not in TASKS:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if body.channel != "telegram":
+        raise HTTPException(status_code=400, detail="Only telegram notifications are supported")
+
+    message = format_task_status_message(
+        task_id,
+        TASKS[task_id],
+        headline="Local Agent current task status",
+    )
+    sent, detail = await send_telegram_message(message)
+    if not sent:
+        raise HTTPException(status_code=503, detail=detail)
+    return {"status": "sent", "task_id": task_id, "channel": "telegram"}
 
 
 @app.post("/api/tasks/{task_id}/confirm")
@@ -312,8 +385,16 @@ async def websocket_endpoint(ws: WebSocket):
 
             await ws.send_json({"type": "start", "data": {"task": task}})
 
-            async for event in agent.stream(task, confirm_fn=confirm_fn):
-                await ws.send_json(event)
+            if data.get("mode") == "instant":
+                started = time.time()
+                answer = await agent.fast_reply(task, model=data.get("fast_model") or get_fast_model())
+                await ws.send_json({
+                    "type": "final",
+                    "data": {"answer": answer, "elapsed": round(time.time() - started, 2), "mode": "instant"},
+                })
+            else:
+                async for event in agent.stream(task, confirm_fn=confirm_fn):
+                    await ws.send_json(event)
 
     except WebSocketDisconnect:
         pass

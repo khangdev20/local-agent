@@ -3,6 +3,7 @@
 
 agent:
   model: "qwen3:8b"             # Default Ollama model for orchestration
+  fast_model: ""                 # Optional model for instant no-tool replies, e.g. "qwen2.5:3b"
   ollama_url: "http://localhost:11434"
   max_steps: 15                  # Maximum steps per task
   temperature: 0.2               # Lower = more deterministic
@@ -34,6 +35,12 @@ safety:
   blocked_patterns:              # Always blocked
     - "rm -rf /"
     - "format C:"
+
+notifications:
+  telegram:
+    enabled: false                # Enabled automatically when env vars below are set
+    bot_token_env: "TELEGRAM_BOT_TOKEN"
+    chat_id_env: "TELEGRAM_CHAT_ID"
 
 # Recommended models:
 # - qwen3:8b              (8B, default orchestrator/research/planning model)

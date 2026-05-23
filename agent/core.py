@@ -36,6 +36,8 @@ RULES:
 - Privacy boundary: do not read secrets, credentials, browser profiles, keychains, SSH/GPG keys, or private user files unless the user explicitly asks for that exact data
 - Privacy boundary: never send local file contents, credentials, environment variables, tokens, or proprietary code to external tools such as web_search
 - Prefer local tools over network tools; ask the user before any outbound request
+- For GUI/browser work: use computer_observe before computer_click/computer_type/computer_press whenever possible, then choose coordinates from the observed UI element positions/sizes.
+- If computer_observe cannot read the screen, ask the user to grant Accessibility permission or provide the needed location before clicking blindly.
 
 TOOL CALL FORMAT (use exactly):
 <tool_call>
@@ -48,6 +50,13 @@ TOOL RESULT will appear as:
 </tool_result>
 
 Think, then act, then observe, then repeat until task is complete.
+"""
+
+FAST_SYSTEM_PROMPT = """You are a fast local assistant.
+
+Reply directly and concisely. Do not use tools. Do not expose hidden reasoning.
+If the user asks for work that requires files, commands, browser actions, or external facts,
+say what you can answer immediately and suggest switching to Agent mode for tool use.
 """
 
 
@@ -120,6 +129,22 @@ class Agent:
                     yield {"type": "final", "data": {"answer": chunk, "elapsed": round(time.time() - start, 2)}}
         except Exception as e:
             yield {"type": "error", "data": {"message": str(e)}}
+
+    async def fast_reply(self, task: str, model: str | None = None) -> str:
+        """Return a direct no-tool response for low-latency UI interactions."""
+        messages = [
+            {"role": "system", "content": FAST_SYSTEM_PROMPT},
+        ]
+
+        history = self.memory.get_recent(n=2)
+        for turn in history:
+            messages.append({"role": "user", "content": turn["user"]})
+            messages.append({"role": "assistant", "content": turn["assistant"]})
+
+        messages.append({"role": "user", "content": task})
+        answer = await self._call_ollama(messages, model=model, num_ctx=2048)
+        self.memory.add_turn(task, answer)
+        return answer
 
     # ── ReAct loop ────────────────────────────────────────────────────────────
 
@@ -197,12 +222,12 @@ class Agent:
         messages.append({"role": "user", "content": task})
         return messages
 
-    async def _call_ollama(self, messages: list[dict]) -> str:
+    async def _call_ollama(self, messages: list[dict], model: str | None = None, num_ctx: int = 8192) -> str:
         payload = {
-            "model": self.model,
+            "model": model or self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": self.temperature, "num_ctx": 8192},
+            "options": {"temperature": self.temperature, "num_ctx": num_ctx},
         }
         resp = await self._client.post(f"{self.ollama_url}/api/chat", json=payload)
         resp.raise_for_status()

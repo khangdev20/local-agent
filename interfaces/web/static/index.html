@@ -75,6 +75,19 @@
   .toggle::after { content: ''; position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: transform .2s; }
   .toggle.on::after { transform: translateX(16px); }
 
+  /* System status */
+  .system-status { padding: 4px 12px 8px; display: flex; flex-direction: column; gap: 8px; }
+  .metric-row { display: grid; grid-template-columns: 42px 1fr 48px; align-items: center; gap: 8px; }
+  .metric-name { color: var(--text2); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .metric-value { color: var(--text); font-family: var(--font-mono); font-size: 11px; text-align: right; white-space: nowrap; }
+  .metric-bar { height: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .metric-fill { width: 0%; height: 100%; background: var(--green); transition: width .25s, background .25s; }
+  .metric-fill.warn { background: var(--yellow); }
+  .metric-fill.hot { background: var(--red); }
+  .metric-note { color: var(--text2); font-size: 11px; line-height: 1.4; padding: 0 4px; }
+  .metric-note.err { color: var(--red); }
+  .system-meta { color: var(--text2); font-size: 11px; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
   /* Main area */
   .main { display: flex; flex-direction: column; overflow: hidden; }
 
@@ -204,6 +217,41 @@
       <span class="setting-label">Auto-confirm actions</span>
       <div class="toggle" id="auto-confirm-toggle" onclick="toggleAutoConfirm()"></div>
     </div>
+    <div class="setting-row">
+      <span class="setting-label">Instant response</span>
+      <div class="toggle" id="instant-toggle" onclick="toggleInstantMode()"></div>
+    </div>
+    <div class="model-select">
+      <select id="fast-model-select" onchange="changeFastModel(this.value)" title="Fast model for instant responses">
+        <option value="">Fast: current model</option>
+      </select>
+    </div>
+
+    <div class="sidebar-section">System Status</div>
+    <div class="system-status">
+      <div class="metric-row">
+        <span class="metric-name">CPU</span>
+        <div class="metric-bar"><div class="metric-fill" id="cpu-fill"></div></div>
+        <span class="metric-value" id="cpu-value">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-name">RAM</span>
+        <div class="metric-bar"><div class="metric-fill" id="ram-fill"></div></div>
+        <span class="metric-value" id="ram-value">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-name">GPU</span>
+        <div class="metric-bar"><div class="metric-fill" id="gpu-fill"></div></div>
+        <span class="metric-value" id="gpu-value">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-name">Temp</span>
+        <div class="metric-bar"><div class="metric-fill" id="temp-fill"></div></div>
+        <span class="metric-value" id="temp-value">--</span>
+      </div>
+      <div class="system-meta" id="system-meta">Loading...</div>
+      <div class="metric-note" id="system-note"></div>
+    </div>
 
     <div class="sidebar-section">Available Tools</div>
     <div class="tools-list" id="tools-list">
@@ -253,6 +301,8 @@
 let ws = null;
 let isRunning = false;
 let autoConfirm = false;
+let instantMode = false;
+let fastModel = '';
 let currentConfirmResolve = null;
 
 const TOOLS = [
@@ -264,6 +314,7 @@ const TOOLS = [
   { name: 'search_files', safe: true },
   { name: 'run_python', safe: false },
   { name: 'run_nodejs', safe: false },
+  { name: 'computer_observe', safe: true },
   { name: 'computer_click', safe: false },
   { name: 'computer_type', safe: false },
   { name: 'computer_press', safe: false },
@@ -281,6 +332,8 @@ window.onload = () => {
   renderTools();
   connectWS();
   checkHealth();
+  updateSystemStatus();
+  setInterval(updateSystemStatus, 5000);
 };
 
 function renderTools() {
@@ -307,6 +360,12 @@ async function checkHealth() {
       sel.innerHTML = data.models.map(m =>
         `<option value="${m}" ${m === data.model ? 'selected' : ''}>${m}</option>`
       ).join('');
+
+      const fastSel = document.getElementById('fast-model-select');
+      fastModel = data.fast_model || '';
+      fastSel.innerHTML = '<option value="">Fast: current model</option>' + data.models.map(m =>
+        `<option value="${m}" ${m === fastModel ? 'selected' : ''}>Fast: ${m}</option>`
+      ).join('');
     } else {
       dot.className = 'status-dot err';
       label.textContent = 'Ollama offline';
@@ -315,6 +374,93 @@ async function checkHealth() {
     document.getElementById('status-dot').className = 'status-dot err';
     document.getElementById('status-label').textContent = 'Server offline';
   }
+}
+
+async function updateSystemStatus() {
+  try {
+    const r = await fetch('/api/system/status');
+    const data = await r.json();
+    renderSystemStatus(data);
+  } catch (e) {
+    document.getElementById('system-meta').textContent = 'System status unavailable';
+    document.getElementById('system-note').textContent = 'Unable to reach /api/system/status';
+    document.getElementById('system-note').className = 'metric-note err';
+  }
+}
+
+function renderSystemStatus(data) {
+  const cpuPercent = data.cpu?.percent;
+  const ramPercent = data.memory?.percent;
+  const gpu = firstGpu(data.gpu);
+  const gpuPercent = gpu?.utilization_percent;
+  const tempC = hottestTemp(data.temperature, gpu);
+
+  setMetric('cpu', cpuPercent, formatPercent(cpuPercent));
+  setMetric('ram', ramPercent, formatPercent(ramPercent));
+  setMetric('gpu', gpuPercent, gpuPercent == null ? gpuLabel(data.gpu) : formatPercent(gpuPercent));
+  setMetric('temp', tempToPercent(tempC), tempC == null ? 'N/A' : `${round(tempC)}°C`);
+
+  const host = data.platform?.hostname || 'local';
+  const cpuName = data.platform?.processor || data.platform?.machine || '';
+  document.getElementById('system-meta').textContent = `${host} · ${cpuName}`;
+
+  const notes = [];
+  if (data.cpu?.note) notes.push(data.cpu.note);
+  if (data.memory?.note) notes.push(data.memory.note);
+  if (data.gpu?.note) notes.push(data.gpu.note);
+  if (data.temperature?.note) notes.push(data.temperature.note);
+  const note = document.getElementById('system-note');
+  note.textContent = notes[0] || `Updated ${new Date((data.timestamp || Date.now() / 1000) * 1000).toLocaleTimeString()}`;
+  note.className = 'metric-note';
+}
+
+function setMetric(id, percent, label) {
+  const fill = document.getElementById(`${id}-fill`);
+  const value = document.getElementById(`${id}-value`);
+  const safePercent = clamp(Number(percent), 0, 100);
+  fill.style.width = Number.isFinite(safePercent) ? `${safePercent}%` : '0%';
+  fill.className = 'metric-fill' + (safePercent >= 85 ? ' hot' : safePercent >= 70 ? ' warn' : '');
+  value.textContent = label;
+}
+
+function firstGpu(gpu) {
+  return gpu?.devices && gpu.devices.length ? gpu.devices[0] : null;
+}
+
+function hottestTemp(temperature, gpu) {
+  const sensorTemps = (temperature?.sensors || [])
+    .map(s => s.current_c)
+    .filter(v => Number.isFinite(Number(v)))
+    .map(Number);
+  const gpuTemps = (gpu?.devices || [])
+    .map(d => d.temperature_c)
+    .filter(v => Number.isFinite(Number(v)))
+    .map(Number);
+  const temps = sensorTemps.concat(gpuTemps);
+  return temps.length ? Math.max(...temps) : null;
+}
+
+function gpuLabel(gpu) {
+  if (gpu?.devices && gpu.devices.length) return 'Info';
+  return 'N/A';
+}
+
+function tempToPercent(tempC) {
+  if (tempC == null) return null;
+  return clamp((Number(tempC) / 100) * 100, 0, 100);
+}
+
+function formatPercent(value) {
+  return value == null || !Number.isFinite(Number(value)) ? 'N/A' : `${round(value)}%`;
+}
+
+function round(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return NaN;
+  return Math.min(max, Math.max(min, value));
 }
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
@@ -372,7 +518,11 @@ function sendTask(taskOverride = null, labelOverride = null) {
   autoResize(input);
   setRunning(true);
 
-  ws.send(JSON.stringify({ task }));
+  ws.send(JSON.stringify({
+    task,
+    mode: instantMode ? 'instant' : 'agent',
+    fast_model: fastModel || undefined,
+  }));
 }
 
 function sendDefaultTask() {
@@ -534,11 +684,20 @@ function changeModel(model) {
   if (ws) ws.send(JSON.stringify({ type: 'settings', model }));
 }
 
+function changeFastModel(model) {
+  fastModel = model;
+}
+
 function toggleAutoConfirm() {
   autoConfirm = !autoConfirm;
   const toggle = document.getElementById('auto-confirm-toggle');
   toggle.classList.toggle('on', autoConfirm);
   if (ws) ws.send(JSON.stringify({ type: 'settings', auto_confirm: autoConfirm }));
+}
+
+function toggleInstantMode() {
+  instantMode = !instantMode;
+  document.getElementById('instant-toggle').classList.toggle('on', instantMode);
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

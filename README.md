@@ -112,10 +112,58 @@ Web UI features:
 
 - Chat interface with WebSocket streaming
 - Step-by-step agent traces, expandable in the UI
+- System status panel for CPU, RAM, GPU, and temperature metrics
+- Instant response mode for direct no-tool replies with an optional faster model
 - Auto-confirm toggle
 - Runtime model selection
 - Memory clearing
 - Run Default button for system design, web/app design, coding conventions, and DevOps learning
+
+## System Status
+
+The Web UI polls this endpoint every few seconds:
+
+```bash
+curl http://localhost:8000/api/system/status
+```
+
+It returns best-effort local performance metrics:
+
+- CPU utilization and load average
+- RAM and swap usage
+- GPU utilization, memory, power, and temperature when `nvidia-smi` is available
+- Apple/integrated GPU device information when exposed by the OS
+- Temperature sensors when exposed by `psutil`; on macOS, `osx-cpu-temp` can provide CPU temperature
+- Battery status when available
+
+Install dependencies for richer metrics:
+
+```bash
+pip install -r requirements.txt
+```
+
+GPU utilization and temperature are platform-dependent. If the OS or driver does not expose a metric, the UI shows `N/A` instead of failing.
+
+## Instant Response Mode
+
+Qwen reasoning models can be slower in full Agent mode because the agent uses a ReAct loop and tool routing. The Web UI includes an **Instant response** toggle for quick no-tool replies.
+
+Instant mode:
+
+- sends the prompt directly to Ollama
+- skips the tool loop
+- uses a shorter context window
+- does not expose reasoning
+- can use a separate faster model
+
+Configure a fast model:
+
+```bash
+export AGENT_FAST_MODEL="qwen2.5:3b"
+python main.py --web --port 8000
+```
+
+You can also pick a fast model from the Web UI dropdown. Keep Agent mode for tasks that need files, shell commands, browser/computer use, web search, or repo changes.
 
 ## Task and Confirmation API
 
@@ -178,6 +226,50 @@ curl -X POST http://localhost:8000/api/tasks/<task_id>/confirm \
 
 To decline, send `"confirmed": false`.
 
+## Telegram Notifications
+
+The Web API can send task status updates to Telegram. This is optional and is enabled when both environment variables are set:
+
+```bash
+export TELEGRAM_BOT_TOKEN="<bot-token-from-botfather>"
+export TELEGRAM_CHAT_ID="<your-chat-id>"
+python main.py --web --port 8000
+```
+
+How to set it up:
+
+1. Create a Telegram bot with `@BotFather` and copy the bot token.
+2. Send any message to your bot from the Telegram app.
+3. Get your chat id:
+
+```bash
+curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates"
+```
+
+4. Set `TELEGRAM_CHAT_ID` to the `message.chat.id` value.
+
+Check notification configuration:
+
+```bash
+curl http://localhost:8000/api/notifications
+```
+
+Send a test Telegram notification:
+
+```bash
+curl -X POST http://localhost:8000/api/notifications/telegram/test
+```
+
+Send the current status of a task to Telegram:
+
+```bash
+curl -X POST http://localhost:8000/api/tasks/<task_id>/notify \
+  -H "Content-Type: application/json" \
+  -d '{"channel": "telegram"}'
+```
+
+When configured, REST tasks automatically notify Telegram when they are queued, started, waiting for confirmation, resumed, completed, or failed.
+
 ## Operating Workflow
 
 The agent is designed to:
@@ -209,6 +301,7 @@ This repository currently includes the core local tools and task/confirmation AP
 | `search_files` | Search files recursively | Required for sensitive paths |
 | `run_python` | Run a Python snippet | Required for risky/outbound patterns |
 | `run_nodejs` | Run a Node.js snippet | Required for risky/outbound patterns |
+| `computer_observe` | Read the active app/window accessibility tree before acting | No |
 | `computer_click` | Click screen coordinates | Always unless auto-confirm is enabled |
 | `computer_type` | Type text into the active app/window | Always unless auto-confirm is enabled |
 | `computer_press` | Press a key in the active app/window | Always unless auto-confirm is enabled |
@@ -264,8 +357,11 @@ Edit `config/default.yaml` or use environment variables:
 
 ```bash
 AGENT_MODEL=qwen3:8b
+AGENT_FAST_MODEL=qwen2.5:3b
 OLLAMA_URL=http://localhost:11434
 AGENT_DEFAULT_TASK="Learn one system design/conventions/DevOps topic and summarize how to apply it to a project"
+TELEGRAM_BOT_TOKEN="<bot-token-from-botfather>"
+TELEGRAM_CHAT_ID="<your-chat-id>"
 ```
 
 ## Recommended Models
@@ -301,7 +397,7 @@ main.py
 │       ├── shell.py     # bash/PowerShell
 │       ├── file_ops.py  # File read/write/search
 │       ├── code_runner.py # Python/Node.js
-│       ├── computer_use.py # Typing/clicking/screenshot GUI automation
+│       ├── computer_use.py # Observe/type/click/screenshot GUI automation
 │       ├── web_search.py  # DuckDuckGo
 │       └── git_ops.py   # Git commands
 └── safety/

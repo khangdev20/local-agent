@@ -14,6 +14,7 @@ from agent.tools.git_ops import git_status, git_diff, git_log
 from agent.tools.computer_use import (
     computer_click,
     computer_hotkey,
+    computer_observe,
     computer_position,
     computer_press,
     computer_screenshot,
@@ -80,6 +81,12 @@ TOOLS: dict[str, dict] = {
     },
 
     # Computer use
+    "computer_observe": {
+        "fn": computer_observe,
+        "description": "Observe the active app/window using accessibility data. Returns visible UI roles, names, values, positions, and sizes when available.",
+        "args": {"max_depth": "int (optional, default 3)", "max_items": "int (optional, default 120)"},
+        "dangerous": False,
+    },
     "computer_click": {
         "fn": computer_click,
         "description": "Click at screen coordinates in the active desktop session.",
