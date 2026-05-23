@@ -13,12 +13,22 @@ from agent.tools.web_search import web_search
 from agent.tools.git_ops import git_status, git_diff, git_log
 from agent.tools.computer_use import (
     computer_click,
+    computer_focus_app,
     computer_hotkey,
     computer_observe,
     computer_position,
     computer_press,
     computer_screenshot,
     computer_type,
+)
+from agent.tools.browser import (
+    browser_open,
+    browser_type,
+    browser_click,
+    browser_press_key,
+    browser_get_content,
+    browser_screenshot,
+    browser_close,
 )
 
 
@@ -123,12 +133,60 @@ TOOLS: dict[str, dict] = {
         "args": {},
         "dangerous": False,
     },
+    "computer_focus_app": {
+        "fn": computer_focus_app,
+        "description": "Focus/activate a specific desktop application by name (macOS only) e.g., 'Cursor' or 'Google Chrome'.",
+        "args": {"app_name": "string — name of application"},
+        "dangerous": True,
+    },
 
     # Web
     "web_search": {
         "fn": web_search,
         "description": "Search DuckDuckGo for information. Returns top results with snippets.",
         "args": {"query": "string — search query", "max_results": "int (optional, default 5)"},
+        "dangerous": False,
+    },
+    "browser_open": {
+        "fn": browser_open,
+        "description": "Open a headful browser with persistent context and navigate to a URL. Persists cookies and session state.",
+        "args": {"url": "string (optional) — URL to navigate to"},
+        "dangerous": False,
+    },
+    "browser_type": {
+        "fn": browser_type,
+        "description": "Type text into an input field on the active browser page using a CSS selector.",
+        "args": {"selector": "string — CSS selector", "text": "string — text to type"},
+        "dangerous": False,
+    },
+    "browser_click": {
+        "fn": browser_click,
+        "description": "Click an element on the active browser page using a CSS selector.",
+        "args": {"selector": "string — CSS selector"},
+        "dangerous": False,
+    },
+    "browser_press_key": {
+        "fn": browser_press_key,
+        "description": "Press a keyboard key in the browser page (e.g. 'Enter', 'Tab').",
+        "args": {"key": "string — key name"},
+        "dangerous": False,
+    },
+    "browser_get_content": {
+        "fn": browser_get_content,
+        "description": "Retrieve the visible text content of the active browser page.",
+        "args": {},
+        "dangerous": False,
+    },
+    "browser_screenshot": {
+        "fn": browser_screenshot,
+        "description": "Capture a screenshot of the active browser page and return the saved path.",
+        "args": {"path": "string (optional) — path to save PNG"},
+        "dangerous": False,
+    },
+    "browser_close": {
+        "fn": browser_close,
+        "description": "Close the active browser instance.",
+        "args": {},
         "dangerous": False,
     },
 

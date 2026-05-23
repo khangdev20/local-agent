@@ -2,7 +2,7 @@
 # Edit this file for your local environment.
 
 agent:
-  model: "qwen3:8b"             # Default Ollama model for orchestration
+  model: "llama3.2-vision:11b"             # Default Ollama model for orchestration
   fast_model: ""                 # Optional model for instant no-tool replies, e.g. "qwen2.5:3b"
   ollama_url: "http://localhost:11434"
   max_steps: 15                  # Maximum steps per task

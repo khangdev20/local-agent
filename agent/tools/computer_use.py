@@ -202,6 +202,27 @@ async def computer_position() -> str:
     return "Mouse position requires pyautogui on this platform."
 
 
+async def computer_focus_app(app_name: str) -> str:
+    """
+    Focus a specific desktop application by name (e.g. "Cursor", "Google Chrome", "Terminal").
+    Only supported on macOS via AppleScript.
+    """
+    if not app_name:
+        return "Error: app_name cannot be empty."
+    if not IS_DARWIN:
+        return "Error: computer_focus_app is only supported on macOS."
+
+    import re
+    if not re.match(r"^[a-zA-Z0-9\s\-_]+$", app_name):
+        return "Error: invalid application name. Only alphanumeric characters, spaces, hyphens, and underscores are allowed."
+
+    script = f'tell application "{app_name}" to activate'
+    result = await _run_command(["osascript", "-e", script])
+    if result.startswith("Error:"):
+        return f"Failed to focus application '{app_name}': {result}"
+    return f"Focused application '{app_name}'."
+
+
 def _truncate_observation(text: str) -> str:
     if len(text) <= MAX_OBSERVE_CHARS:
         return text

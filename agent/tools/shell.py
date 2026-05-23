@@ -16,7 +16,7 @@ DEFAULT_TIMEOUT = 60  # seconds
 MAX_OUTPUT_CHARS = 8000  # truncate long output
 
 
-async def run_shell(command: str, cwd: str = None, timeout: int = DEFAULT_TIMEOUT) -> str:
+async def run_shell(command: str, cwd: str | None = None, timeout: int = DEFAULT_TIMEOUT) -> str:
     """
     Run a shell command asynchronously.
     - Linux/Mac: bash -c "command"

@@ -8,7 +8,7 @@ import json
 import re
 import time
 from dataclasses import dataclass, field
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional
 
 import httpx
 
@@ -194,10 +194,30 @@ class Agent:
 
             # 4. Append to conversation
             messages.append({"role": "assistant", "content": response_text})
-            messages.append({
+            
+            images = []
+            if "screenshot saved to" in tool_result.lower():
+                import os
+                import base64
+                match = re.search(r"saved to\s+(.*)", tool_result, re.IGNORECASE)
+                if match:
+                    img_path = match.group(1).strip()
+                    try:
+                        if os.path.exists(img_path):
+                            with open(img_path, "rb") as f:
+                                encoded_image = base64.b64encode(f.read()).decode("utf-8")
+                                images.append(encoded_image)
+                    except Exception:
+                        pass
+
+            user_message: dict[str, Any] = {
                 "role": "user",
                 "content": f"<tool_result>\n{tool_result}\n</tool_result>\n\nContinue."
-            })
+            }
+            if images:
+                user_message["images"] = images
+                
+            messages.append(user_message)
 
         # Max steps reached
         yield Step(thought="Max steps reached.", is_final=True)

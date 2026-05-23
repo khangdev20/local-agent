@@ -78,11 +78,27 @@ ALWAYS_CONFIRM_TOOLS = {
     "computer_type",
     "computer_press",
     "computer_hotkey",
+    "computer_focus_app",
 }
 
 LOCAL_ONLY_TOOLS = {"read_file", "write_file", "patch_file", "list_dir", "search_files"}
-EXTERNAL_TOOLS = {"web_search"}
-GUI_CONTROL_TOOLS = {"computer_click", "computer_type", "computer_press", "computer_hotkey"}
+EXTERNAL_TOOLS = {
+    "web_search",
+    "browser_open",
+    "browser_type",
+    "browser_click",
+    "browser_press_key",
+    "browser_get_content",
+    "browser_screenshot",
+    "browser_close",
+}
+GUI_CONTROL_TOOLS = {
+    "computer_click",
+    "computer_type",
+    "computer_press",
+    "computer_hotkey",
+    "computer_focus_app",
+}
 
 
 class SafetyGate:
@@ -172,6 +188,22 @@ class SafetyGate:
             return f"⚠️  Press key in active app?\n  Key: {args.get('key')}\n  Presses: {args.get('presses', 1)}{privacy_note}"
         elif tool_name == "computer_hotkey":
             return f"⚠️  Press hotkey in active app?\n  Keys: {args.get('keys')}{privacy_note}"
+        elif tool_name == "computer_focus_app":
+            return f"⚠️  Focus active application?\n  App name: {args.get('app_name')}{privacy_note}"
+        elif tool_name == "browser_open":
+            return f"🌐  Open browser and navigate?\n  URL: {args.get('url', 'about:blank')}{privacy_note}"
+        elif tool_name == "browser_type":
+            return f"🌐  Type in browser?\n  Selector: {args.get('selector')}\n  Text preview: {args.get('text', '')[:60]}...{privacy_note}"
+        elif tool_name == "browser_click":
+            return f"🌐  Click in browser?\n  Selector: {args.get('selector')}{privacy_note}"
+        elif tool_name == "browser_press_key":
+            return f"🌐  Press key in browser?\n  Key: {args.get('key')}{privacy_note}"
+        elif tool_name == "browser_get_content":
+            return f"🌐  Retrieve text content from active browser page?{privacy_note}"
+        elif tool_name == "browser_screenshot":
+            return f"🌐  Capture browser screenshot?{privacy_note}"
+        elif tool_name == "browser_close":
+            return f"🌐  Close browser instance?{privacy_note}"
         return f"⚠️  Execute {tool_name} with args: {args}{privacy_note}"
 
     def _touches_sensitive_path(self, tool_name: str, args: dict) -> bool:
